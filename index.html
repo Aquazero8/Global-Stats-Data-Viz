@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <title>Homework #3: Global Developments - CSE 578 - Spring 2023</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        .myContainer {
+            margin: auto;
+            width: 1210px;
+        }
+
+        #g_div {
+            float: left;
+            width: 920px;
+            padding: 10px;
+        }
+
+        #c_div {
+            float: left;
+            width: 260x;
+            padding: 10px;
+            float: right;
+        }
+
+        .graph_svg {
+            width: 900px;
+            height: 600px;
+            background-color: white;
+            border: 1px solid lightgray;
+            border-radius: 3px;
+        }
+
+        .control_svg {
+            width: 260px;
+            height: 600px;
+            background-color: white;
+            border: 1px solid lightgray;
+            border-radius: 3px;
+        }
+
+        #time_value {
+            color: red;
+        }
+        #Play{
+            background-color: lime;
+            border-radius: 10px;
+         }
+        #date_button{
+            background-color: lime;
+            border-radius: 10px;
+        }
+        #select_all{
+            background-color: lime;
+            border-radius: 10px;
+        }
+        #clear_country_selection{
+            background-color: lime;
+            border-radius: 10px;
+        }
+        #c_div{
+            background-color: lightgoldenrodyellow;
+            border-radius: 20px;
+            border-width: 1px;
+            border-color: black;
+            border-style: solid;
+        }
+
+        body{
+            background-color: lightskyblue;
+        }
+
+         body{
+            background: linear-gradient(to bottom, white,  #1BFFFF);
+        } 
+    </style>
+</head>
+
+<body>
+    <div class="myContainer">
+        <h1 class="text-center">Homework #3: Global Developments</h1>
+        <h3 class="text-center">Abhinav Mohan - achinth4@asu.edu</h3>
+        <hr>
+
+        <div id="g_div" class="border border-dark rounded bg-light shadow-sm" >
+            <b>Countries Line Chart</b>
+            <svg id="g_svg" class="graph_svg"></svg>
+        </div>
+        <div id="c_div" >
+            <b>Control panel</b> <br><br>
+            <b>Global Indicator</b><br>
+            <select id="attribute_select" onchange='drawLineChart();'>
+                <option value='Birth_Rate'>Birth_Rate</value>
+                <option value='Death_Rate'>Death_Rate</value>
+                <option value='Cell_Subscriptions'>Cell_Subscriptions</value>
+                <option value='Total_Population'>Total_Population</value>
+                <option value='Telephone_Lines'>Telephone_Lines</value>
+                <option value='Agricultural_Land'>Agricultural_Land</value>
+                <option value='Arable_Land'>Arable_Land</value>
+                <option value='Land_Area'>Land_Area</value>
+                <option value='Surface_Area'>Surface_Area</value>
+                <option value='Population_Density'>Population_Density</value>
+            </select>
+            <br>
+            <br>
+            <b>Region Selection</b><br>
+            <input type="checkbox" id="region1" name="region" value="East Asia & Pacific" onchange='drawLineChart();'>
+            <label for="region1"> East Asia & Pacific</label><br>
+            <input type="checkbox" id="region2" name="region" value="Europe & Central Asia" onchange='drawLineChart();'>
+            <label for="region2"> Europe & Central Asia</label><br>
+            <input type="checkbox" id="region3" name="region" value="Latin America & Caribbean"
+                onchange='drawLineChart();'>
+            <label for="region3"> Latin America & Caribbean</label><br>
+            <input type="checkbox" id="region4" name="region" value="Middle East & North Africa"
+                onchange='drawLineChart();'>
+            <label for="region4"> Middle East & North Africa</label><br>
+            <input type="checkbox" id="region5" name="region" value="North America" onchange='drawLineChart();'>
+            <label for="region5"> North America</label><br>
+            <input type="checkbox" id="region6" name="region" value="South Asia" onchange='drawLineChart();'>
+            <label for="region6"> South Asia</label><br>
+            <input type="checkbox" id="region7" name="region" value="Sub-Saharan Africa" onchange='drawLineChart();'>
+            <label for="region7"> Sub-Saharan Africa</label><br><br>
+
+
+            <input type='button' id='select_all' value='select all regions' onclick='selects()'><br>
+            <input type='button' id='clear_country_selection' value='clear region selection'
+                onclick='deSelect()'><br><br>
+            <b>Opacity:</b> <span id="opacity_value"></span> percent<br>
+            <input type="range" min="40" max="100" value="100" class="slider" id="opacity_Range"><br><br>
+            <input type='button' id='Play' value='Play' onclick='animateChart()'><br><br>
+            <input type="checkbox" id="flags" name="region" onchange='drawLineChart();'>
+            <label for="region7"> Flags toggle </label><br><br>
+            <b>Year Range</b><br>
+            <span id="time_value"></span><br />
+            Start year: <input type='number' id='from_date' value='1980' width=> <br />
+            End year &nbsp;: <input type='number' id='to_date' value='2013'> <br />
+            <input type='button' id='date_button' value='Set Range' onclick='drawLineChart()'><br />
+
+
+        </div>
+    </div>
+</body>
+<script>
+
+
+
+    var svg_g = d3.select('#g_svg');
+
+    var margin = { top: 60, right: 60, bottom: 60, left: 80 };
+    const width = 900;
+    const height = 600;
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+
+    var xScale = d3.scaleTime();
+    var country_Data = []
+    var global_Data
+    var new_Global_Data = []
+    var region_Data
+    var abv_Region_Data = {}
+    var new_Region_Data = {}
+    var g
+    var attribute
+    var regions = []
+    var selected_Country_Data = []
+    var Date1 = new Date(1980, 0, 1)
+    var from_date
+    var from_year
+    var to_date
+    var to_year
+    g = svg_g.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Setting opacity slider
+    var slider = document.getElementById("opacity_Range");
+    var opac_value = document.getElementById("opacity_value");
+    var opacity_value = 100
+    opac_value.innerHTML = slider.value;
+
+
+    slider.oninput = function () {
+        opac_value.innerHTML = this.value;
+        opacity_value = this.value
+        drawLineChart()
+    }
+
+    // Select/ Deselect buttons
+    function selects() {
+        var ele = document.getElementsByName('region');
+        for (var i = 0; i < ele.length; i++) {
+            if (ele[i].type == 'checkbox' && ele[i].id != 'flags')
+                ele[i].checked = true;
+        }
+        drawLineChart()
+    }
+    function deSelect() {
+        var ele = document.getElementsByName('region');
+        for (var i = 0; i < ele.length; i++) {
+            if (ele[i].type == 'checkbox' && ele[i].id != 'flags')
+                ele[i].checked = false;
+
+        }
+        drawLineChart()
+
+    }
+
+
+
+    Promise.all([d3.csv('data/global_development.csv', (d) => {
+        return {
+            Year: new Date(+d.Year, 0, 1),
+            Country: d["Country"],
+            Birth_Rate: +d['Data.Health.Birth Rate'],
+            Death_Rate: +d["Data.Health.Death Rate"],
+            Cell_Subscriptions: +d['Data.Infrastructure.Mobile Cellular Subscriptions'],
+            Total_Population: +d['Data.Health.Total Population'],
+            Telephone_Lines: +d['Data.Infrastructure.Telephone Lines'],
+            Agricultural_Land: +d['Data.Rural Development.Agricultural Land'],
+            Arable_Land: +d['Data.Rural Development.Arable Land'],
+            Land_Area: +d['Data.Rural Development.Land Area'],
+            Surface_Area: +d['Data.Rural Development.Surface Area'],
+            Population_Density: +d['Data.Urban Development.Population Density']
+        }
+    }),
+
+    d3.csv('data/countries_regions.csv', (d) => {
+        return {
+            name: d.name,
+            region: d["World bank region"],
+            geo: d.geo
+
+        }
+
+
+
+    })])
+        .then(function (values) {
+            console.log('loaded csv files');
+            global_Data = values[0];
+            region_Data = values[1];
+
+
+
+            region_Data.forEach(d => {
+                // console.log("this is country d",d)
+
+                new_Region_Data[d["name"]] = d["region"]
+                abv_Region_Data[d["name"]] = d["geo"]
+            });
+            console.log("this is abv_region_dat", abv_Region_Data)
+
+            for (var i = 0; i < global_Data.length; i++) {
+                if (global_Data[i].Country in new_Region_Data) {
+                    new_Global_Data.push(global_Data[i])
+                }
+
+            }
+
+
+            console.log("global_Data:", global_Data, "region_Data", region_Data, "new_region_Data", new_Region_Data, "new_Global_Data", new_Global_Data)
+
+
+
+
+        });
+
+
+
+
+    function selected_region() {
+        var ele = document.getElementsByName('region');
+        for (var i = 0; i < ele.length; i++) {
+            if (ele[i].type == 'checkbox' && ele[i].checked == true) {
+                regions.push(ele[i].value)
+            }
+
+        }
+    }
+
+
+    function setTime() {
+
+    }
+
+    function drawLineChart() {
+
+        if (document.getElementById("from_date").value < document.getElementById("to_date").value) {
+            from_date = document.getElementById("from_date").value;
+            to_date = document.getElementById("to_date").value;
+            console.log(from_date, to_date)
+            document.getElementById("time_value").innerHTML = " "
+        }
+        else {
+            document.getElementById("time_value").innerHTML = "enter valid range "
+
+        }
+        from_year = new Date(from_date, 0, 1)
+        to_year = new Date(to_date, 0, 1)
+        country_Data = []
+
+        for (var i = 0, j = 0; i < new_Global_Data.length; i++) {
+            if ((j == 0 || new_Global_Data[i].Country != country_Data[j - 1].Country) && new_Global_Data[i].Year >= from_year
+                && new_Global_Data[i].Year <= to_year) {
+                //  console.log("new_Global_Data[i]",new_Global_Data[i])
+                country_Data.push({ 'Country': new_Global_Data[i].Country, 'items': [], 'region': "new", 'geo': abv_Region_Data[new_Global_Data[i].Country] })
+                // console.log("test",new_Region_Data[new_Global_Data[i].Country])
+                country_Data[j]['items'].push(new_Global_Data[i])
+                country_Data[j]["region"] = new_Region_Data[new_Global_Data[i].Country]
+                j++
+            }
+            else if (new_Global_Data[i].Year >= from_year
+                && new_Global_Data[i].Year <= to_year)
+                // console.log ("this is j", j , "country_Data[j]",country_Data[j])
+
+                country_Data[j - 1]['items'].push(new_Global_Data[i])
+
+        }
+        console.log("this is final country_Data", country_Data)
+        //Selected check boxes
+        regions = []
+        selected_region()
+
+
+
+
+
+        var selected_Country_Data = []
+        for (var i = 0; i < country_Data.length; i++) {
+            for (var j = 0; j < regions.length; j++) {
+                if (country_Data[i].region == regions[j]) {
+                    selected_Country_Data.push(country_Data[i])
+                    break
+                }
+
+            }
+
+        }
+
+        console.log("These are selected regions", regions)
+        console.log("These are selected countries", selected_Country_Data)
+
+
+
+
+        attribute = document.getElementById('attribute_select').value
+        // console.log("Selected attribute", attribute)
+
+        // scales
+
+
+
+
+
+        xScale.domain([from_year, to_year])
+            .range([0, innerWidth]);
+
+        // var yScale = d3.scaleLinear()
+        //     .domain([0, d3.max(country_Data, d => d[attribute])])
+        //     .range([innerHeight, 0]);
+
+        // console.log("at test", (country_Data[1]).items[1][attribute])
+
+        var yScale = d3.scaleLinear()
+            .range([innerHeight, 0])
+            .domain([0, d3.max(selected_Country_Data, country => {
+                return d3.max(country.items, item => item[attribute])
+            })]);
+
+        g.append('g')
+            .attr("id", "axis_y")
+
+        d3.select("#axis_y")
+            .transition()
+            .duration(1000)
+            .call(d3.axisLeft(yScale))
+            ;
+
+        g.append('g')
+            .attr("id", "axis_x")
+
+        d3.select("#axis_x")
+            .attr('transform', `translate(0,${innerHeight})`)
+            .transition()
+            .duration(1000)
+            .call(d3.axisBottom(xScale))
+
+
+
+        // function addAxesLabels(g) {
+
+
+        g.append('text')
+            .attr("id", "text_y")
+
+        d3.select("#text_y")
+            .attr('transform', 'rotate(-90)')
+            .attr('dy', '-60')
+            .attr('dx', '-160')
+            .style('text-anchor', 'end')
+            .transition()
+            .duration(1000)
+            .text(document.getElementById('attribute_select').value);
+
+        g.append('text')
+            .attr('transform', `translate(${innerWidth / 2},${innerHeight + 40})`)
+            .style('text-anchor', 'end')
+            .text('Year');
+        // }
+
+
+
+        var singleLine = d3.line()
+            .x(d => xScale(d.Year))
+            .y(d => yScale(d[attribute]))
+            .curve(d3.curveMonotoneX);
+
+
+        var l = g.selectAll('.path')
+            .data(selected_Country_Data, d => d.Country)
+
+        var circles = g.selectAll('.circle')
+            .data(selected_Country_Data, d => d.Country)
+
+        var country_tag = g.selectAll('.text')
+            .data(selected_Country_Data, d => d.Country)
+
+        var flag_g = g.selectAll('.image')
+            .data(selected_Country_Data, d => d.Country)
+
+        l.join(
+            enter => enter
+                // .append("svg")
+                .append("path")
+                .attr("fill", "none")
+                .attr("class", "path")
+                // .merge(l)
+
+                .style('stroke', function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+                .style('stroke-width', '3')
+                .style("opacity", 0)
+                .call(enter => enter
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .attr('d', function (d) { return singleLine(d.items); }))
+                .call(enter => enter
+                .on('mouseover', function(d,i){
+                    // console.log ("Mouseover d enter",d,"Mouseover i",i)
+                    
+
+                        d3.selectAll('.path').style("opacity",d => d === i ? opacity_value / 100:0.15)                                                                  
+                        d3.selectAll('.circle').style("opacity",d => d === i ? opacity_value / 100:0.15)
+                        if (document.getElementById('flags').checked == false){
+                            d3.selectAll('.text').style("opacity",d => d === i ? opacity_value / 100:0.15)
+                    }
+                    else{
+                        d3.selectAll('.image').style("opacity", d => d === i ? opacity_value / 100:0.15)
+                    }
+                        
+                        
+                        
+
+                    
+                })
+                .on('mouseout', function(d,i){
+
+                    d3.selectAll('.path').style("opacity",  opacity_value / 100)
+                    d3.selectAll('.circle').style("opacity",  opacity_value / 100)
+                    if (document.getElementById('flags').checked == false){
+                            d3.selectAll('.text').style("opacity",  opacity_value / 100)
+                    }
+                    else{
+                        d3.selectAll('.image').style("opacity",  opacity_value / 100)
+                    }
+
+                })
+                )
+
+
+                
+     
+
+
+
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .attr('d', function (d) { return singleLine(d.items); })
+   
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+
+
+        )
+
+
+
+        circles.join(
+            enter => enter
+                // .append("svg")
+                .append("circle")
+                .attr("class", "circle")
+                .attr("fill", function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+
+
+                .style('stroke', "black")
+                .attr("cx", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("cy", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .attr("r", 4)
+                .style('stroke-width', '1')
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .attr("cx", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("cy", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+
+        country_tag.join(
+            enter => enter
+                // .append("svg")
+                .append("text")
+                .attr("class", "text")
+                .attr("fill", function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+                // .attr("class", "path")
+                // .merge(l)
+                // .transition()
+                // .duration(1000)
+
+
+                .attr("x", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .text(d => d.Country)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == false){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .attr("x", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == false){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+
+        flag_g.join(
+            enter => enter
+                // .append("svg")
+                .append("image")
+                .attr("class", "image")
+                .attr("x", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .attr("xlink:href", function(d) {
+        return (`flags/flags/png/${d.geo}.png`);
+      })
+                .attr("width", 20)
+                 .attr("height", 15)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == true){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .attr("x", function (d) { return (xScale(d.items[d.items.length - 1].Year)) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == true){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+        console.log("this is l", l)
+
+
+
+
+
+
+    }
+
+    function animateChart() {
+        if (document.getElementById("from_date").value < document.getElementById("to_date").value) {
+            from_date = document.getElementById("from_date").value;
+            to_date = document.getElementById("to_date").value;
+            console.log(from_date, to_date)
+            document.getElementById("time_value").innerHTML = " "
+        }
+        else {
+            document.getElementById("time_value").innerHTML = "enter valid range "
+
+        }
+        from_year = new Date(from_date, 0, 1)
+        to_year = new Date(to_date, 0, 1)
+        country_Data = []
+
+        for (var i = 0, j = 0; i < new_Global_Data.length; i++) {
+            if ((j == 0 || new_Global_Data[i].Country != country_Data[j - 1].Country) && new_Global_Data[i].Year >= from_year
+                && new_Global_Data[i].Year <= to_year) {
+                //  console.log("new_Global_Data[i]",new_Global_Data[i])
+                country_Data.push({ 'Country': new_Global_Data[i].Country, 'items': [], 'region': "new", 'geo': abv_Region_Data[new_Global_Data[i].Country] })
+                // console.log("test",new_Region_Data[new_Global_Data[i].Country])
+                country_Data[j]['items'].push(new_Global_Data[i])
+                country_Data[j]["region"] = new_Region_Data[new_Global_Data[i].Country]
+                j++
+            }
+            else if (new_Global_Data[i].Year >= from_year
+                && new_Global_Data[i].Year <= to_year)
+                // console.log ("this is j", j , "country_Data[j]",country_Data[j])
+
+                country_Data[j - 1]['items'].push(new_Global_Data[i])
+
+        }
+        console.log("this is final country_Data", country_Data)
+        //Selected check boxes
+        regions = []
+        selected_region()
+
+
+
+
+
+        var selected_Country_Data = []
+        for (var i = 0; i < country_Data.length; i++) {
+            for (var j = 0; j < regions.length; j++) {
+                if (country_Data[i].region == regions[j]) {
+                    selected_Country_Data.push(country_Data[i])
+                    break
+                }
+
+            }
+
+        }
+
+        console.log("These are selected regions", regions)
+        console.log("These are selected countries", selected_Country_Data)
+
+
+
+
+        attribute = document.getElementById('attribute_select').value
+        // console.log("Selected attribute", attribute)
+
+        // scales
+
+
+
+
+
+        xScale.domain([from_year, to_year])
+            .range([0, innerWidth]);
+
+        // var yScale = d3.scaleLinear()
+        //     .domain([0, d3.max(country_Data, d => d[attribute])])
+        //     .range([innerHeight, 0]);
+
+        // console.log("at test", (country_Data[1]).items[1][attribute])
+
+        var yScale = d3.scaleLinear()
+            .range([innerHeight, 0])
+            .domain([0, d3.max(selected_Country_Data, country => {
+                return d3.max(country.items, item => item[attribute])
+            })]);
+
+        g.append('g')
+            .attr("id", "axis_y")
+
+        d3.select("#axis_y")
+            .transition()
+            .duration(1000)
+            .call(d3.axisLeft(yScale))
+            ;
+
+        g.append('g')
+            .attr("id", "axis_x")
+
+        d3.select("#axis_x")
+            .attr('transform', `translate(0,${innerHeight})`)
+            .transition()
+            .duration(1000)
+            .call(d3.axisBottom(xScale))
+
+
+
+        // function addAxesLabels(g) {
+
+
+        g.append('text')
+            .attr("id", "text_y")
+
+        d3.select("#text_y")
+            .attr('transform', 'rotate(-90)')
+            .attr('dy', '-60')
+            .attr('dx', '-160')
+            .style('text-anchor', 'end')
+            .transition()
+            .duration(1000)
+            .text(document.getElementById('attribute_select').value);
+
+        g.append('text')
+            .attr('transform', `translate(${innerWidth / 2},${innerHeight + 40})`)
+            .style('text-anchor', 'end')
+            .text('Year');
+        // }
+
+
+
+        var singleLine = d3.line()
+            .x(d => xScale(d.Year))
+            .y(d => yScale(d[attribute]))
+            .curve(d3.curveMonotoneX);
+
+
+        var l = g.selectAll('.path')
+            .data(selected_Country_Data, d => d.Country)
+
+        var circles = g.selectAll('.circle')
+            .data(selected_Country_Data, d => d.Country)
+
+        var country_tag = g.selectAll('.text')
+            .data(selected_Country_Data, d => d.Country)
+
+        var flag_g = g.selectAll('.image')
+            .data(selected_Country_Data, d => d.Country)
+
+        l.join(
+            enter => enter
+                // .append("svg")
+                .append("path")
+                .attr("fill", "none")
+                .attr("class", "path")
+                // .merge(l)
+
+                .style('stroke', function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+                .style('stroke-width', '3')
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .attr('d', function (d) { return singleLine(d.items); })
+//                 .each( function(d,i){console.log("this is d for enter",d, "this is i",i)
+//                     return d3.select(this)
+//   .attr("stroke-dashoffset", d3.select(this).node().getTotalLength())
+//   .attr("stroke-dasharray", d3.select(this).node().getTotalLength())
+//   .transition()
+//   .duration(3000)
+//   .attr("stroke-dashoffset", 0)
+// })
+
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .attr('d', function (d) { return singleLine(d.items); })
+                .each( 
+                    function(d,i){
+                        // console.log("this is d for update",d, "this is i",i)
+                    return d3.select(this)
+  .attr("stroke-dashoffset", d3.select(this).node().getTotalLength())
+  .attr("stroke-dasharray", d3.select(this).node().getTotalLength())
+  .transition()
+  .duration(3000)
+  .attr("stroke-dashoffset", 0)
+}
+)
+
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+
+
+        )
+
+
+
+        circles.join(
+            enter => enter
+                // .append("svg")
+                .append("circle")
+                .attr("class", "circle")
+                .attr("fill", function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+
+
+                .style('stroke', "black")
+                .attr("cx", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("cy", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .attr("r", 4)
+                .style('stroke-width', '1')
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+
+
+            , update => update
+                
+                .attr("cx", function (d) { return xScale(d.items[0].Year) })
+                .attr("cy", function (d) { return yScale(d.items[0][attribute]) })
+                .each(function(d,i){
+                    d3.select(this)
+                    .transition()
+        .duration(3000)
+        .tween("pathtween",function(a,b){
+          return function(t){
+            //  console.log("this is l.nodes()[i] ",l.nodes()[i])
+              var p = l.nodes()[i].getPointAtLength(l.nodes()[1].getTotalLength()*t)
+              d3.select(this).attr("cx",p.x).attr("cy",p.y)
+          }
+         })
+                    
+
+                 })
+
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+
+        country_tag.join(
+            enter => enter
+                // .append("svg")
+                .append("text")
+                .attr("class", "text")
+                .attr("fill", function (d) {
+                    if (d.region == 'East Asia & Pacific') {
+                        return "cyan"
+                    }
+
+                    else if (d.region == 'Europe & Central Asia') {
+                        return "red"
+                    }
+                    else if (d.region == 'Latin America & Caribbean') {
+                        return "blue"
+                    }
+                    else if (d.region == 'Middle East & North Africa') {
+                        return "purple"
+                    }
+                    else if (d.region == 'North America') {
+                        return "yellow"
+                    }
+                    else if (d.region == 'South Asia') {
+                        return "lime"
+                    }
+                    else if (d.region == 'Sub-Saharan Africa') {
+                        return "black"
+                    }
+
+                })
+                // .attr("class", "path")
+                // .merge(l)
+                // .transition()
+                // .duration(1000)
+
+
+                .attr("x", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .text(d => d.Country)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", opacity_value / 100)
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == false){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .attr("x", function (d) { return (xScale(d.items[0].Year)) })
+                .attr("y", function (d) { return yScale(d.items[0][attribute]) })
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == false){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+                .each(function(d,i){
+                    d3.select(this)
+                    .transition()
+        .duration(3000)
+        .tween("pathtween",function(a,b){
+          return function(t){
+            //  console.log("this is l.nodes()[i] ",l.nodes()[i])
+              var p = l.nodes()[i].getPointAtLength(l.nodes()[1].getTotalLength()*t)
+              d3.select(this).attr("x",p.x).attr("y",p.y)
+          }
+         })
+                    
+
+                 })
+                
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+
+        flag_g.join(
+            enter => enter
+                // .append("svg")
+                .append("image")
+                .attr("class", "image")
+                .attr("x", function (d) { return xScale(d.items[d.items.length - 1].Year) })
+                .attr("y", function (d) { return yScale(d.items[d.items.length - 1][attribute]) })
+                .attr("xlink:href", function(d) {
+        return (`flags/flags/png/${d.geo}.png`);
+      })
+                .attr("width", 20)
+                 .attr("height", 15)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == true){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+
+                })
+
+
+            , update => update
+                .transition()
+                .duration(1000)
+                .attr("x", function (d) { return (xScale(d.items[0].Year)) })
+                .attr("y", function (d) { return yScale(d.items[0][attribute]) })
+                .style("opacity", function (d) {
+                    if (document.getElementById('flags').checked == true){
+                        return  opacity_value / 100
+                    }
+                    else{
+                        return 0
+                    }
+                    
+
+                })
+                .each(function(d,i){
+                    d3.select(this)
+                    .transition()
+        .duration(3000)
+        .tween("pathtween",function(a,b){
+          return function(t){
+            //  console.log("this is l.nodes()[i] ",l.nodes()[i])
+              var p = l.nodes()[i].getPointAtLength(l.nodes()[1].getTotalLength()*t)
+              d3.select(this).attr("x",p.x).attr("y",p.y)
+          }
+         })
+                    
+
+                 })
+            , exit => exit
+                .transition()
+                .duration(1000)
+                .style("opacity", 0)
+                .remove()
+
+        )
+        console.log("this is l", l)
+
+
+
+    }
+
+
+</script>
+
+</html>
